@@ -3,12 +3,10 @@ mod index;
 mod hotkey;
 mod ui;
 
-use std::sync::mpsc::{self, Sender};
-use std::time::Duration;
 
 use parking_lot::RwLock;
 use wry::application::event::{Event, StartCause, WindowEvent};
-use wry::application::event_loop::{ControlFlow, EventLoop, EventLoopProxy};
+use wry::application::event_loop::{ControlFlow, EventLoopBuilder};
 use wry::application::window::WindowBuilder;
 use wry::webview::WebViewBuilder;
 
@@ -30,8 +28,8 @@ struct AppState {
 fn main() -> wry::Result<()> {
     setup_logging();
 
-    let event_loop: EventLoop<AppEvent> = EventLoop::with_user_event();
-    let proxy: EventLoopProxy<AppEvent> = event_loop.create_proxy();
+    let event_loop = EventLoopBuilder::<AppEvent>::with_user_event().build();
+    let proxy = event_loop.create_proxy();
 
     let window = WindowBuilder::new()
         .with_title("Bookmark Launcher")
@@ -50,9 +48,9 @@ fn main() -> wry::Result<()> {
 
     // Build webview
     let proxy_clone = proxy.clone();
-    let webview = WebViewBuilder::new(window)
-        .with_url("data:text/html,".to_string() + &urlencoding::encode(HTML_INDEX))
-        .with_ipc_handler(move |_window, msg| {
+    let webview = WebViewBuilder::new(window)?
+        .with_url(&("data:text/html,".to_string() + &urlencoding::encode(HTML_INDEX)))?
+        .with_ipc_handler(move |_window, msg: String| {
             if let Ok(ipc) = serde_json::from_str::<IpcMessage>(&msg) {
                 match ipc {
                     IpcMessage::Search { query } => {
@@ -67,8 +65,7 @@ fn main() -> wry::Result<()> {
                 }
             }
         })
-        .build()
-        .expect("failed to create webview");
+        .build()?;
 
     // Hotkey thread (Windows)
     hotkey::spawn_global_hotkey_listener(proxy.clone());
@@ -94,7 +91,7 @@ fn main() -> wry::Result<()> {
                 }
             }
             Event::UserEvent(AppEvent::Toggle) => {
-                let vis = webview.window().is_visible().unwrap_or(false);
+                let vis = webview.window().is_visible();
                 if vis {
                     webview.window().set_visible(false);
                 } else {
@@ -120,7 +117,6 @@ fn main() -> wry::Result<()> {
                 let _ = open::that(url);
                 webview.window().set_visible(false);
             }
-            Event::UserEvent(AppEvent::SearchIndexUpdated) => unreachable!(),
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
                 *control_flow = ControlFlow::Exit;
             }
@@ -132,7 +128,7 @@ fn main() -> wry::Result<()> {
             }
             _ => {}
         }
-    });
+    })
 }
 
 fn setup_logging() {
