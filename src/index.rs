@@ -1,6 +1,5 @@
 use serde::Serialize;
 use crate::bookmarks::BookmarkItem;
-use parking_lot::RwLock;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SearchResultItem {

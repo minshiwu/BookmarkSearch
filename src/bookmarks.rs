@@ -1,10 +1,12 @@
-use std::{fs, path::{Path, PathBuf}, time::SystemTime};
-use notify::{RecommendedWatcher, RecursiveMode, Watcher, EventKind};
+use std::{fs, path::{Path, PathBuf}};
 use serde::{Deserialize, Serialize};
-use std::sync::mpsc::channel;
-use wry::application::event_loop::EventLoopProxy;
 
-use crate::AppEvent;
+#[cfg(windows)]
+use notify::{RecursiveMode, EventKind};
+#[cfg(windows)]
+use std::sync::mpsc::channel;
+#[cfg(windows)]
+use wry::application::event_loop::EventLoopProxy;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct BookmarkItem {
@@ -44,7 +46,7 @@ pub fn scan_all_browsers() -> Vec<BookmarkItem> {
     items
 }
 
-pub fn spawn_watchers(_proxy: EventLoopProxy<crate::AppEvent>) {
+pub fn spawn_watchers(_proxy: wry::application::event_loop::EventLoopProxy<crate::AppEvent>) {
     #[cfg(windows)]
     {
         let paths = all_bookmark_files();
